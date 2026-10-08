@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAFS • Generate Lesson</title><link rel="stylesheet" href="./styles.css"></head><body>
+<header class="topbar">
+<div class="brand"><img src="./logo.png" alt="DAFS logo"><div><strong>DAFS Lesson Note AI</strong><span>Destiny Achievers Foundation School</span></div></div>
+<div class="top-actions"><span id="userBadge" class="user-badge"></span><button class="menu" id="menuBtn" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="menuDrawer">☰</button></div>
+</header>
+<div class="menu-drawer-backdrop" id="menuBackdrop"></div>
+<aside class="menu-drawer" id="menuDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div><span class="eyebrow">DAFS MENU</span><strong>Account & Navigation</strong></div>
+    <button class="drawer-close" id="drawerClose" aria-label="Close menu">×</button>
+  </div>
+  <div class="drawer-user">
+    <span class="drawer-avatar" id="drawerAvatar">T</span>
+    <div><b id="drawerUserName">Teacher</b><small id="drawerUserRole">Teacher</small></div>
+  </div>
+  <nav class="drawer-nav">
+    <a href="./teacher.html">⌂ <span>Dashboard</span></a>
+    <a href="./generator.html">✦ <span>Generate Lesson</span></a>
+    <a href="./notes.html">▤ <span>My Lesson Notes</span></a><a href="./exam.html">▣ <span>Generate Examination</span></a>
+    <a class="drawer-admin hidden" id="drawerAdminLink" href="./admin.html">♙ <span>Principal Admin</span></a>
+  </nav>
+  <div class="drawer-footer">
+    <button class="drawer-logout" id="logoutBtn"><span>↪</span> Log out</button>
+  </div>
+</aside><div class="layout"><aside class="sidebar">
+<div class="side-school"><img src="./logo.png" alt="DAFS logo"><b>DAFS PORTAL</b><small id="sideRole">Teacher</small></div>
+<a class="nav" href="./teacher.html">⌂ <span>Dashboard</span></a>
+<a class="nav" href="./generator.html">✦ <span>Generate Lesson</span></a>
+<a class="nav" href="./notes.html">▤ <span>My Lesson Notes</span></a><a class="nav" href="./exam.html">▣ <span>Generate Examination</span></a>
+<div class="side-bottom">Knowledge is enlightening</div>
+</aside><main class="content">
+<section class="panel page"><div class="section-title"><div><span class="eyebrow">AI GENERATOR</span><h2>Create a complete lesson note</h2></div><span id="status" class="status">Ready</span></div>
+<div class="grid"><label>Teacher's Name<input id="teacherName" readonly></label><label>Date<input id="lessonDate" type="date"></label><label>Class<select id="classLevel"></select></label><label>Term<select id="term"></select></label><label>Subject<select id="subject"></select><small id="subjectCoverage" class="field-hint">Select a class and term to load the subjects in your uploaded scheme.</small></label><label>Week<select id="week"><option value="">Select week</option><option value="1">Week 1</option><option value="2">Week 2</option><option value="3">Week 3</option><option value="4">Week 4</option><option value="5">Week 5</option><option value="6">Week 6</option><option value="7">Week 7</option><option value="8">Week 8</option><option value="9">Week 9</option><option value="10">Week 10</option><option value="11">Week 11</option><option value="12">Week 12</option></select></label><label id="schemeVariantWrap" class="wide" hidden>Scheme source / entry<select id="schemeVariant"></select><small class="field-hint">Your uploaded scheme contains parallel tables for some subjects. Choose the exact source entry you want to teach.</small></label><label class="wide">Lagos State Scheme Topic<input id="topic" placeholder="Select a scheme week or enter the topic"></label><label>Duration<input id="duration" placeholder="Enter duration"></label><label>Learning area / strand<input id="learningArea"></label><label class="wide">Scheme-based learning objectives<textarea id="objectives" rows="5" placeholder="Objectives from the selected Lagos State scheme entry"></textarea><small class="field-hint">The uploaded First Term scheme provides the weekly topic. Where the PDF does not list explicit objectives, the AI will create suitable objectives from the exact topic. For other terms, enter the school's official scheme objectives when available.</small></label><label class="wide">Teaching aids<input id="teachingAids" placeholder="Charts, pictures, objects, ICT tools..."></label><label class="wide">Reference materials<input id="references" placeholder="Enter the real textbook, teacher guide or school reference"></label><label>Assessment<select id="assessmentType"><option>Oral + written</option><option>Class activity</option><option>Practical activity</option><option>Quiz</option></select></label></div>
+<button id="generate" class="primary full" type="button">✦ Generate Full Lesson Note</button>
+<div id="generationPanel" class="generation-panel" hidden aria-live="polite" aria-busy="false">
+  <div class="generation-spinner" aria-hidden="true"></div>
+  <div class="generation-copy">
+    <strong id="generationTitle">Preparing your lesson note…</strong>
+    <span id="generationMessage">Checking your lesson details and preparing the AI request.</span>
+    <div class="generation-track"><span id="generationBar"></span></div>
+  </div>
+</div>
+<div id="schemeStatus" class="lesson-format-card"><strong>Lagos State Scheme of Work</strong><p>For First Term, the uploaded school scheme is the authoritative source for KG 1, KG 2, Nursery 1, Nursery 2 and Primary 1–Primary 5. Volume 1 is mapped to KG 1, Volume 2 to KG 2, Volume 3 to Nursery 1 and Volume 4 to Nursery 2 because their topics show the progression in those classes. The separately labelled Primary 1–Primary 5 tables remain mapped to their named classes. The AI expands the exact selected topic into the DAFS lesson-note format and creates objectives when the PDF does not explicitly list them. Second/Third Term continue to use the existing catalog until the school supplies those schemes.</p></div><div class="lesson-format-card"><strong>DAFS lesson-note format</strong><p>The generated note follows the handwritten example supplied by the school. The AI writes the actual teaching content for the selected topic (not a description of what the teacher should do): Name, Class, Date, Subject, Week, Topic, Duration, Learning Objectives, Instructional Materials, Reference Materials, detailed Lesson Content, step-by-step Presentation with Teacher/Pupil Activities, Evaluation, Conclusion and Assignment.</p></div><p class="fineprint">Curriculum basis: Lagos State scheme entries loaded into the school application, supplemented by teacher-entered official scheme information when an exact catalog entry is not available. The AI must never invent or falsely label missing Lagos State curriculum data.</p></section>
+<section class="panel"><div class="section-title"><div><span class="eyebrow">RESULT</span><h2>Generated Lesson Note</h2></div><div class="actions"><button id="copyBtn" class="secondary">Copy</button><button id="printBtn" class="secondary">Print</button><button id="saveBtn" class="secondary">Save to My Notes</button></div></div><article id="output" class="note" aria-live="polite"><div class="empty">Your generated lesson note will appear here.</div></article></section>
+</main></div><footer>DESTINY ACHIEVERS FOUNDATION SCHOOL • Knowledge is enlightening</footer><script src="./generator.js"></script></body></html>

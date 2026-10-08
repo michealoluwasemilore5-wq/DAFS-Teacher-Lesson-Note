@@ -1,0 +1,36 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAFS • Principal Admin</title><link rel="stylesheet" href="./styles.css"></head><body>
+<header class="topbar">
+<div class="brand"><img src="./logo.png" alt="DAFS logo"><div><strong>DAFS Lesson Note AI</strong><span>Destiny Achievers Foundation School</span></div></div>
+<div class="top-actions"><span id="userBadge" class="user-badge"></span><button class="menu" id="menuBtn" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="menuDrawer">☰</button></div>
+</header>
+<div class="menu-drawer-backdrop" id="menuBackdrop"></div>
+<aside class="menu-drawer" id="menuDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div><span class="eyebrow">DAFS MENU</span><strong>Account & Navigation</strong></div>
+    <button class="drawer-close" id="drawerClose" aria-label="Close menu">×</button>
+  </div>
+  <div class="drawer-user">
+    <span class="drawer-avatar" id="drawerAvatar">T</span>
+    <div><b id="drawerUserName">Teacher</b><small id="drawerUserRole">Teacher</small></div>
+  </div>
+  <nav class="drawer-nav">
+    <a href="./teacher.html">⌂ <span>Dashboard</span></a>
+    <a href="./generator.html">✦ <span>Generate Lesson</span></a>
+    <a href="./notes.html">▤ <span>My Lesson Notes</span></a><a href="./exam.html">▣ <span>Generate Examination</span></a>
+    <a class="drawer-admin hidden" id="drawerAdminLink" href="./admin.html">♙ <span>Principal Admin</span></a>
+  </nav>
+  <div class="drawer-footer">
+    <button class="drawer-logout" id="logoutBtn"><span>↪</span> Log out</button>
+  </div>
+</aside><div class="layout"><aside class="sidebar">
+<div class="side-school"><img src="./logo.png" alt="DAFS logo"><b>DAFS PORTAL</b><small id="sideRole">Teacher</small></div>
+<a class="nav" href="./teacher.html">⌂ <span>Dashboard</span></a>
+<a class="nav" href="./generator.html">✦ <span>Generate Lesson</span></a>
+<a class="nav" href="./notes.html">▤ <span>My Lesson Notes</span></a><a class="nav" href="./exam.html">▣ <span>Generate Examination</span></a>
+<div class="side-bottom">Knowledge is enlightening</div>
+</aside><main class="content">
+<div id="adminError" class="alert" style="margin-bottom:16px"></div><section class="page"><div class="welcome"><div><span class="eyebrow">PRINCIPAL CONTROL CENTRE</span><h1>School Administration</h1><p>Manage teachers and review all lesson notes.</p></div><span class="status">PRINCIPAL / ADMIN</span></div>
+<div class="cards"><div class="metric"><span>Total teachers</span><b id="adminTeachers">0</b><small>Registered teachers</small></div><div class="metric"><span>Total lesson notes</span><b id="adminNotes">0</b><small>Across the school</small></div><div class="metric"><span>Active teachers</span><b id="adminActive">0</b><small>Accounts enabled</small></div></div></section>
+<section class="panel"><div class="section-title"><div><span class="eyebrow">TEACHERS</span><h2>Teacher accounts</h2></div></div><div id="teacherTable"></div></section>
+<section class="panel"><div class="section-title"><div><span class="eyebrow">SCHOOL-WIDE LESSON NOTES</span><h2>All teacher notes</h2></div></div><div id="adminNotesList"></div></section>
+</main></div><footer>DESTINY ACHIEVERS FOUNDATION SCHOOL • Principal Administration</footer><script src="./admin.js"></script></body></html>

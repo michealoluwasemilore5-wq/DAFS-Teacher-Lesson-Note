@@ -1,0 +1,1044 @@
+import express from "express";
+import dotenv from "dotenv";
+import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import bcrypt from "bcryptjs";
+import passport from "passport";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { GoogleGenAI } from "@google/genai";
+import { Document, Packer, Paragraph, TextRun, ImageRun, AlignmentType, HeadingLevel, Table, TableRow, TableCell, WidthType, BorderStyle, PageBreak } from "docx";
+import pg from "pg";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+dotenv.config();
+
+const { Pool } = pg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const app = express();
+const port = Number(process.env.PORT || 3000);
+const publicUrl = String(process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || "").replace(/\/$/, "");
+
+const model = process.env.GEMINI_MODEL?.trim() || "gemini-3.8-flash";
+const fallbackModel = process.env.GEMINI_FALLBACK_MODEL?.trim() || "gemini-3.5-flash-lite";
+const curriculum = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "curriculum.json"), "utf8"));
+const lagosScheme = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "lagos_scheme.json"), "utf8"));
+const uploadedFirstTermScheme = JSON.parse(fs.readFileSync(path.join(__dirname, "data", "first_term_uploaded_scheme.json"), "utf8"));
+const isProduction = process.env.NODE_ENV === "production";
+// Render sits behind a reverse proxy. Trust it so secure session cookies are
+// correctly marked and sent back to the browser in production.
+if (isProduction) app.set("trust proxy", 1);
+const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+
+const databaseUrl = process.env.NEON_DATABASE_URL || process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  console.error("NEON_DATABASE_URL is required. Connect this app to a Neon PostgreSQL database before deploying it for real use.");
+  if (isProduction) process.exit(1);
+}
+if (!process.env.SESSION_SECRET) {
+  console.error("SESSION_SECRET is required. Set a long random secret in the deployment environment.");
+  if (isProduction) process.exit(1);
+}
+if (!process.env.GEMINI_API_KEY) {
+  console.warn("GEMINI_API_KEY is not configured. AI generation will be unavailable until it is set.");
+}
+if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
+  console.warn("ADMIN_EMAIL and ADMIN_PASSWORD are not configured. Principal/Admin login will remain unavailable until they are set.");
+}
+
+const pool = databaseUrl ? new Pool({
+  connectionString: databaseUrl,
+  // Neon uses TLS. The Neon connection string normally includes sslmode=require;
+  // this also keeps production connections compatible with Neon when sslmode is omitted.
+  ssl: isProduction ? { rejectUnauthorized: false } : undefined,
+  max: Number(process.env.DB_POOL_MAX || 10)
+}) : null;
+
+async function dbQuery(text, params = []) {
+  if (!pool) throw new Error("Database is not configured.");
+  return pool.query(text, params);
+}
+
+async function initDatabase() {
+  if (!pool) return;
+  await dbQuery(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT,
+      role TEXT NOT NULL CHECK (role IN ('teacher','admin')),
+      provider TEXT NOT NULL DEFAULT 'local',
+      google_id TEXT UNIQUE,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS users_role_idx ON users(role);
+    CREATE TABLE IF NOT EXISTS notes (
+      id TEXT PRIMARY KEY,
+      teacher_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      teacher_name TEXT NOT NULL,
+      title TEXT NOT NULL,
+      meta JSONB NOT NULL DEFAULT '{}'::jsonb,
+      content TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS notes_teacher_idx ON notes(teacher_id);
+    CREATE INDEX IF NOT EXISTS notes_created_idx ON notes(created_at DESC);
+  `);
+}
+
+function uid(prefix) { return `${prefix}_${crypto.randomUUID()}`; }
+function safeUser(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    role: row.role,
+    provider: row.provider,
+    active: row.active,
+    createdAt: row.created_at
+  };
+}
+function toUser(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    passwordHash: row.password_hash,
+    role: row.role,
+    provider: row.provider,
+    googleId: row.google_id,
+    active: row.active,
+    createdAt: row.created_at
+  };
+}
+
+async function findUserById(id) {
+  const { rows } = await dbQuery("SELECT * FROM users WHERE id = $1 AND active = TRUE", [id]);
+  return toUser(rows[0]);
+}
+async function findUserByEmail(email) {
+  const { rows } = await dbQuery("SELECT * FROM users WHERE email = $1", [email]);
+  return toUser(rows[0]);
+}
+async function ensureAdmin() {
+  if (!pool || !process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) return;
+  const email = process.env.ADMIN_EMAIL.trim().toLowerCase();
+  const existing = await findUserByEmail(email);
+  const passwordHash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 12);
+  const adminName = cleanText(process.env.ADMIN_NAME, 100) || existing?.name || email.split("@")[0];
+  if (existing) {
+    // ADMIN_EMAIL/ADMIN_PASSWORD are authoritative. Reconcile an older teacher,
+    // Google-linked, or disabled account so the configured Principal can always
+    // sign in after a deployment/restart.
+    await dbQuery(
+      `UPDATE users SET name=$1, password_hash=$2, role='admin', provider='local', active=TRUE WHERE id=$3`,
+      [adminName, passwordHash, existing.id]
+    );
+    console.log(`Principal/Admin account reconciled for ${email}.`);
+    return;
+  }
+  await dbQuery(
+    `INSERT INTO users (id,name,email,password_hash,role,provider,active) VALUES ($1,$2,$3,$4,'admin','local',TRUE)`,
+    [uid("usr"), process.env.ADMIN_NAME?.trim() || email.split("@")[0], email, passwordHash]
+  );
+  console.log(`Principal/Admin account created for ${email}.`);
+}
+
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'");
+  if (isProduction) res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+
+app.use((req,res,next)=>{if(req.path.startsWith("/api/")||req.path.startsWith("/auth/"))res.setHeader("Cache-Control","no-store");next();});
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true }));
+
+function saveLoginSession(req) {
+  return new Promise((resolve, reject) => req.session.save(err => err ? reject(err) : resolve()));
+}
+
+// Lightweight process-local abuse protection. Render normally runs a small number
+// of instances for this school app, and this prevents accidental double-clicks and
+// obvious brute-force bursts without adding another infrastructure dependency.
+const rateBuckets = new Map();
+function allowRateLimit(key, limit, windowMs) {
+  const now = Date.now();
+  const current = rateBuckets.get(key);
+  if (!current || current.resetAt <= now) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+  if (current.count >= limit) return false;
+  current.count += 1;
+  return true;
+}
+function clientKey(req) {
+  return String(req.ip || req.headers["x-forwarded-for"] || "unknown").split(",")[0].trim();
+}
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of rateBuckets) if (bucket.resetAt <= now) rateBuckets.delete(key);
+}, 10 * 60 * 1000).unref?.();
+
+const PgStore = connectPgSimple(session);
+app.use(session({
+  store: pool ? new PgStore({ pool, createTableIfMissing: true }) : undefined,
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: isProduction,
+    maxAge: 1000 * 60 * 60 * 24 * 7
+  }
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+function sendRolePage(role, file) {
+  return (req, res) => {
+    if (!req.isAuthenticated?.() || !req.user) return res.redirect("./login.html");
+    if (role === "admin" && req.user.role !== "admin") return res.redirect("./login.html?adminRequired=1");
+    if (role === "teacher" && req.user.role === "admin") return res.redirect("./admin.html");
+    res.sendFile(path.join(__dirname, "public", file));
+  };
+}
+
+// Server-side page guards prevent teachers from even receiving the admin page shell.
+app.get("/admin.html", sendRolePage("admin", "admin.html"));
+app.get("/teacher.html", sendRolePage("teacher", "teacher.html"));
+app.get("/generator.html", sendRolePage("teacher", "generator.html"));
+app.get("/notes.html", sendRolePage("teacher", "notes.html"));
+app.get("/exam.html", (req, res) => {
+  if (!req.isAuthenticated?.() || !req.user) return res.redirect("./login.html");
+  res.sendFile(path.join(__dirname, "public", "exam.html"));
+});
+
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
+
+passport.serializeUser((user, done) => done(null, user.id));
+passport.deserializeUser(async (id, done) => {
+  try { done(null, await findUserById(id)); } catch (err) { done(err); }
+});
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  if (isProduction && !process.env.GOOGLE_CALLBACK_URL && !publicUrl) throw new Error("GOOGLE_CALLBACK_URL or PUBLIC_URL is required when Google sign-in is enabled in production.");
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || `${publicUrl || `http://localhost:${port}`}/auth/google/callback`
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value?.toLowerCase();
+      if (!email) return done(new Error("Google account did not provide an email."));
+      let user = await findUserByEmail(email);
+      if (!user) {
+        const id = uid("usr");
+        await dbQuery(
+          `INSERT INTO users (id,name,email,google_id,provider,role,active) VALUES ($1,$2,$3,$4,'google','teacher',TRUE)`,
+          [id, profile.displayName || email.split("@")[0], email, profile.id]
+        );
+        user = await findUserById(id);
+      } else {
+        await dbQuery(`UPDATE users SET google_id = COALESCE(google_id,$1), provider = CASE WHEN provider='local' THEN 'local+google' ELSE provider END WHERE id=$2`, [profile.id, user.id]);
+        user = await findUserById(user.id);
+      }
+      done(null, user);
+    } catch (err) { done(err); }
+  }));
+}
+
+function requireAuth(req, res, next) {
+  if (!req.isAuthenticated?.() || !req.user) return res.status(401).json({ error: "Please log in." });
+  next();
+}
+function requireAdmin(req, res, next) {
+  if (!req.isAuthenticated?.() || !req.user || req.user.role !== "admin") return res.status(403).json({ error: "This page is not available for your account." });
+  next();
+}
+
+app.get("/healthz", async (req, res) => {
+  try {
+    await dbQuery("SELECT 1");
+    res.json({ status: "ok" });
+  } catch {
+    res.status(503).json({ status: "unavailable" });
+  }
+});
+
+app.get("/api/config", (req, res) => res.json({ googleSignIn: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) }));
+app.get("/api/curriculum", requireAuth, (req, res) => {
+  const firstTermSubjectsByClass = {};
+  for (const classLevel of curriculum.classes) {
+    firstTermSubjectsByClass[classLevel] = uploadedFirstTermScheme.classes.includes(classLevel)
+      ? [...new Set(uploadedFirstTermScheme.entries.filter(e => e.classLevel === classLevel && e.term === "First Term" && e.subject).map(e => e.subject))].sort()
+      : [];
+  }
+  res.json({ ...curriculum, weeks: Array.from({length:12}, (_,i)=>i+1), firstTermSubjectsByClass });
+});
+function subjectIsAllowedForSelection(classLevel, term, subject) {
+  if (!curriculum.classes.includes(classLevel) || !curriculum.terms.includes(term) || !curriculum.subjects.includes(subject)) return false;
+  if (term === "First Term") {
+    const uploadedSubjects = new Set(uploadedFirstTermScheme.entries.filter(e => e.classLevel === classLevel && e.term === term).map(e => e.subject));
+    return uploadedSubjects.has(subject);
+  }
+  return true;
+}
+
+app.get("/api/scheme", requireAuth, (req, res) => {
+  const classLevel = cleanText(req.query.classLevel, 50);
+  const term = cleanText(req.query.term, 50);
+  const subject = cleanText(req.query.subject, 100);
+  if (!subjectIsAllowedForSelection(classLevel, term, subject)) {
+    return res.status(400).json({ error: "Select a subject that is available for the selected class and term." });
+  }
+
+  // The uploaded First Term PDF is authoritative for KG 1, KG 2, Nursery 1, Nursery 2 and Primary 1–Primary 5.
+  // Volume 1→KG 1, Volume 2→KG 2, Volume 3→Nursery 1, Volume 4→Nursery 2.
+  // Other terms continue to use the existing catalog until their school schemes are supplied.
+  const catalog = term === "First Term" && uploadedFirstTermScheme.classes.includes(classLevel)
+    ? uploadedFirstTermScheme
+    : lagosScheme;
+  const entries = catalog.entries
+    .filter(e => e.classLevel === classLevel && e.term === term && e.subject === subject && Number(e.week) >= 1 && Number(e.week) <= 12)
+    .sort((a,b)=>Number(a.week)-Number(b.week) || Number(a.sourcePage || 0)-Number(b.sourcePage || 0));
+  res.json({
+    schoolSystem: catalog.schoolSystem,
+    weeks: Array.from({length:12}, (_,i)=>i+1),
+    loadedWeeks: [...new Set(entries.map(e => Number(e.week)))],
+    entries,
+    sources: catalog.sources || [{ title: catalog.sourceFile || "Uploaded school scheme", file: catalog.sourceFile || "All Schemes Class by Class — First Term" }],
+    authoritativeSchoolUpload: catalog === uploadedFirstTermScheme
+  });
+});
+app.get("/api/me", (req, res) => res.json(req.user ? { authenticated: true, user: safeUser(req.user) } : { authenticated: false }));
+
+function cleanText(value, max = 200) {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+function validEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+function validISODate(value) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const d = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value;
+}
+const allowedAssessmentTypes = new Set(["Oral + written", "Class activity", "Practical activity", "Quiz"]);
+
+app.post("/api/auth/signup", async (req, res) => {
+  if (!allowRateLimit(`signup:${clientKey(req)}`, 8, 15 * 60 * 1000)) return res.status(429).json({ error: "Too many registration attempts. Please wait a few minutes and try again." });
+  try {
+    const name = cleanText(req.body?.name, 100);
+    const normalized = cleanText(req.body?.email, 254).toLowerCase();
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+    if (!name) return res.status(400).json({ error: "Full name is required." });
+    if (name.length < 2) return res.status(400).json({ error: "Enter your full name." });
+    if (!validEmail(normalized)) return res.status(400).json({ error: "Enter a valid email address." });
+    if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
+    if (password.length > 128) return res.status(400).json({ error: "Password is too long." });
+    if (await findUserByEmail(normalized)) return res.status(409).json({ error: "An account with that email already exists." });
+    const user = { id: uid("usr"), name, email: normalized, passwordHash: await bcrypt.hash(password, 12), role: "teacher", provider: "local", active: true };
+    try {
+      await dbQuery(`INSERT INTO users (id,name,email,password_hash,role,provider,active) VALUES ($1,$2,$3,$4,$5,$6,$7)`, [user.id,user.name,user.email,user.passwordHash,user.role,user.provider,user.active]);
+    } catch (dbErr) {
+      if (dbErr?.code === "23505") return res.status(409).json({ error: "An account with that email already exists." });
+      throw dbErr;
+    }
+    await new Promise((resolve, reject) => req.login(user, err => err ? reject(err) : resolve()));
+    await saveLoginSession(req);
+    res.json({ ok: true, user: safeUser({ ...user, created_at: new Date().toISOString() }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Account creation failed. Please try again." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  if (!allowRateLimit(`login:${clientKey(req)}`, 12, 15 * 60 * 1000)) return res.status(429).json({ error: "Too many sign-in attempts. Please wait a few minutes and try again." });
+  try {
+    const email = cleanText(req.body?.email, 254).toLowerCase();
+    const password = typeof req.body?.password === "string" ? req.body.password : "";
+    if (!validEmail(email) || !password) return res.status(401).json({ error: "Invalid email or password." });
+    const user = await findUserByEmail(email);
+    if (!user || user.active === false || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash)))
+      return res.status(401).json({ error: "Invalid email or password." });
+    await new Promise((resolve, reject) => req.login(user, err => err ? reject(err) : resolve()));
+    await saveLoginSession(req);
+    res.json({ ok: true, user: safeUser({ ...user, created_at: user.createdAt }) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Login failed. Please try again." });
+  }
+});
+
+app.get("/auth/google", (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return res.status(503).send("Google sign-in is currently unavailable. Please use email and password.");
+  passport.authenticate("google", { scope: ["profile", "email"], prompt: "select_account" })(req, res, next);
+});
+app.get("/auth/google/callback", passport.authenticate("google", { failureRedirect: "/login.html?google=failed" }), (req, res) => res.redirect("/teacher.html"));
+app.post("/api/auth/logout", (req, res) => req.logout(err => {
+  if (err) return res.status(500).json({ error: "Logout failed." });
+  req.session.destroy(sessionErr => {
+    if (sessionErr) return res.status(500).json({ error: "Logout failed." });
+    res.clearCookie("connect.sid", {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: isProduction,
+      path: "/"
+    });
+    res.json({ ok: true });
+  });
+}));
+
+app.get("/api/notes", requireAuth, async (req, res) => {
+  const { rows } = await dbQuery(`SELECT id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,content,created_at AS "createdAt",updated_at AS "updatedAt" FROM notes WHERE teacher_id=$1 ORDER BY created_at DESC`, [req.user.id]);
+  res.json(rows);
+});
+app.post("/api/notes", requireAuth, async (req, res) => {
+  const title = cleanText(req.body?.title, 200);
+  const content = typeof req.body?.content === "string" ? req.body.content.trim().slice(0, 500000) : "";
+  const rawMeta = req.body?.meta && typeof req.body.meta === "object" && !Array.isArray(req.body.meta) ? req.body.meta : {};
+  const meta = Object.fromEntries(Object.entries(rawMeta).slice(0, 30).map(([k,v]) => [String(k).slice(0, 60), String(v ?? "").slice(0, 1000)]));
+  if (!title || !content) return res.status(400).json({ error: "A lesson title and lesson content are required." });
+  const id = uid("note");
+  const { rows } = await dbQuery(`INSERT INTO notes (id,teacher_id,teacher_name,title,meta,content) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,content,created_at AS "createdAt",updated_at AS "updatedAt"`, [id,req.user.id,req.user.name,title,meta,content]);
+  res.json(rows[0]);
+});
+app.delete("/api/notes/:id", requireAuth, async (req, res) => {
+  const result = await dbQuery("DELETE FROM notes WHERE id=$1 AND teacher_id=$2", [req.params.id, req.user.id]);
+  if (!result.rowCount) return res.status(404).json({ error: "Note not found." });
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/overview", requireAdmin, async (req, res) => {
+  const teacherResult = await dbQuery(`SELECT id,name,email,role,provider,active,created_at AS "createdAt" FROM users WHERE role='teacher' ORDER BY created_at DESC`);
+  const noteResult = await dbQuery(`SELECT id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,created_at AS "createdAt",updated_at AS "updatedAt" FROM notes ORDER BY created_at DESC`);
+  const teachers = teacherResult.rows;
+  const notes = noteResult.rows;
+  res.json({ stats: { teachers: teachers.length, notes: notes.length, activeTeachers: teachers.filter(t => t.active !== false).length }, teachers, notes });
+});
+app.get("/api/admin/notes/:id", requireAdmin, async (req, res) => {
+  const { rows } = await dbQuery(`SELECT id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,content,created_at AS "createdAt",updated_at AS "updatedAt" FROM notes WHERE id=$1`, [req.params.id]);
+  if (!rows.length) return res.status(404).json({ error: "Lesson note not found." });
+  res.json(rows[0]);
+});
+
+app.patch("/api/admin/users/:id", requireAdmin, async (req, res) => {
+  const userResult = await dbQuery("SELECT id FROM users WHERE id=$1 AND role='teacher'", [req.params.id]);
+  if (!userResult.rowCount) return res.status(404).json({ error: "Teacher not found." });
+  const fields = [];
+  const values = [];
+  if (typeof req.body.active === "boolean") { fields.push(`active=$${values.length+1}`); values.push(req.body.active); }
+  if (typeof req.body.name === "string" && req.body.name.trim()) { const nextName=req.body.name.trim().slice(0,100); fields.push(`name=$${values.length+1}`); values.push(nextName); }
+  if (!fields.length) return res.json({ ok: true });
+  values.push(req.params.id);
+  await dbQuery(`UPDATE users SET ${fields.join(",")} WHERE id=$${values.length}`, values);
+  res.json({ ok: true });
+});
+app.delete("/api/admin/notes/:id", requireAdmin, async (req, res) => {
+  const result = await dbQuery("DELETE FROM notes WHERE id=$1", [req.params.id]);
+  if (!result.rowCount) return res.status(404).json({ error: "Note not found." });
+  res.json({ ok: true });
+});
+
+const activeGenerations = new Set();
+const activeExamGenerations = new Set();
+
+function normalizeObjectiveLine(text) {
+  return String(text || "").replace(/^\s*(?:\d+|[-*])\s*[.)-]?\s*/, "").trim();
+}
+
+function lessonLooksGeneric(note, payload) {
+  const text = String(note || "").toLowerCase();
+  const required = ["lesson content", "presentation", "evaluation", "conclusion", "assignment"];
+  if (!required.every(x => text.includes(x))) return true;
+
+  const genericPhrases = [
+    "the main idea selected for this lesson",
+    "the lesson develops this point through clear explanations",
+    "the teacher explains the main ideas in simple, age-appropriate language",
+    "the teacher explains the important terms and ideas related to the topic",
+    "the lesson should be understood through the definitions, facts, examples and applications",
+    "write three things you learnt from today's lesson",
+    "is an important part of this lesson",
+    "pupils learn what",
+    "the idea should be understood through clear facts",
+    "the teacher should correct wrong ideas",
+    "the lesson is concluded by revising the main facts"
+  ];
+  const genericHits = genericPhrases.filter(x => text.includes(x)).length;
+
+  const topic = String(payload.topic || "").toLowerCase().trim();
+  const topicMentions = topic ? (text.match(new RegExp(topic.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length : 0;
+  const contentStart = text.indexOf("lesson content");
+  const presentationStart = text.indexOf("presentation", Math.max(contentStart + 1, 0));
+  const content = contentStart >= 0 ? text.slice(contentStart, presentationStart > contentStart ? presentationStart : undefined) : text;
+
+  // Actual teaching content should contain several concrete knowledge signals,
+  // not merely the topic name and directions to a teacher.
+  const factualSignals = [
+    /\b(is|are|means|refers to|defined as)\b/g,
+    /\b(for example|examples include|such as)\b/g,
+    /\b(types|parts|functions|characteristics|uses|causes|effects|steps|stages|features)\b/g,
+    /\b(because|therefore|when|how|why)\b/g
+  ].reduce((n, re) => n + (content.match(re) || []).length, 0);
+
+  // Reject the known bad template style even if it contains the required headings.
+  if (genericHits >= 1) return true;
+  if (topic && topicMentions < 3) return true;
+  if (content.trim().length < 1200) return true;
+  if (factualSignals < 7) return true;
+  if (/teacher.?s activities|pupils.? activities|the teacher will|the teacher should|pupils will/i.test(content)) return true;
+  if (/\b(learn what|understand what|main idea selected|develops this point|important part of this lesson)\b/i.test(content)) return true;
+  return false;
+}
+
+const LESSON_WRITER_INSTRUCTIONS = `
+You are the professional lesson-note writer for DESTINY ACHIEVERS FOUNDATION SCHOOL (DAFS), a Nigerian primary school.
+
+IMPORTANT: WRITE THE ACTUAL LESSON NOTE. DO NOT WRITE A DESCRIPTION OF WHAT A TEACHER SHOULD DO.
+
+The output must read like a real Nigerian primary-school teacher's lesson note, similar to a detailed handwritten lesson note. The most important part is LESSON CONTENT: you must teach the selected topic by writing the actual subject knowledge pupils need to learn.
+
+CRITICAL OUTPUT CONTRACT: The generated LESSON CONTENT must be the notes a teacher can read aloud or use directly to teach pupils. It must NOT be a plan for writing the lesson and must NOT explain what a teacher should do. Write the actual subject matter in complete paragraphs and numbered factual points. Do not turn each learning objective into a vague heading followed by filler. Expand each objective with real knowledge, definitions, explanations, examples and relevant facts.
+
+BAD: "Syllables is an important part of this lesson. In this section, pupils learn what the objective means."
+GOOD: "A syllable is a part of a word that is pronounced as one beat of sound. Some words have one syllable, while others have two or more. For example, 'cat' has one syllable, 'teacher' has two syllables (teach-er), and 'beautiful' has three syllables (beau-ti-ful)."
+
+The BAD style above is forbidden for every topic. The GOOD style is the required style: teach the actual topic with concrete facts.
+
+For the selected topic, WRITE SPECIFIC FACTUAL CONTENT such as:
+- the meaning/definition of the topic;
+- parts, types, classes or categories where applicable;
+- functions, characteristics, uses, causes, effects, processes or steps where applicable;
+- clear explanations of every important point in the learning objectives;
+- several concrete, age-appropriate examples;
+- familiar Nigerian/home/school/community examples when relevant;
+- relationships between ideas in the topic;
+- a short summary of the actual facts taught.
+
+NEVER fill Lesson Content with generic sentences such as "the lesson develops this point", "the teacher explains the main ideas", "the main idea selected for this lesson", or "pupils should understand what the point means". Those sentences are not lesson content. If the topic is "The Muscular System", for example, actually explain the muscular system, types of muscles, their functions, examples and how muscles work with the skeleton. If the topic is about roads, actually explain what roads are, types of roads, their characteristics, uses and examples. Adapt the facts to the selected topic.
+
+The format must contain ALL of these sections:
+1. TEACHER'S NAME
+2. CLASS
+3. DATE
+4. SUBJECT
+5. WEEK
+6. TOPIC and SUB-TOPIC when appropriate
+7. DURATION
+8. LEARNING OBJECTIVES — numbered and preserved from supplied scheme objectives when they exist. If the supplied school scheme contains a topic but no explicit objectives, create clear, age-appropriate objectives directly from that topic and do not claim they were copied from the scheme.
+9. INSTRUCTIONAL MATERIALS
+10. REFERENCE MATERIALS
+11. LESSON CONTENT — substantial, topic-specific teaching notes with headings and numbered points where useful
+12. PRESENTATION — numbered classroom steps. Only here should you describe Teacher's Activities and Pupils' Activities.
+13. EVALUATION — numbered questions whose answers come directly from the lesson content you wrote
+14. CONCLUSION — a short summary of the actual knowledge taught
+15. ASSIGNMENT — numbered homework questions/tasks directly about the topic and lesson content
+
+LESSON CONTENT QUALITY RULES:
+- Do not write "The teacher will explain..." as the substance of the note.
+- Do not repeat the objectives with a generic paragraph underneath each one.
+- Do not use placeholders such as "[insert examples]".
+- Do not say "the lesson develops this point".
+- Do not give a generic definition such as "this is the main idea selected for the lesson".
+- Do not invent facts just to make the note longer. Use accurate primary-school knowledge.
+- Make the content detailed enough that a teacher can teach directly from the written content without having to create the content themselves.
+- Presentation activities must teach/reinforce the actual content, not replace it.
+- Evaluation and assignment must be answerable from the actual content you wrote.
+
+CURRICULUM RULE: For First Term KG 1, KG 2, Nursery 1, Nursery 2 and Primary 1–Primary 5, the school-uploaded First Term scheme is authoritative. Volume 1 maps to KG 1, Volume 2 to KG 2, Volume 3 to Nursery 1, and Volume 4 to Nursery 2 based on the topic progression in the uploaded source. Use its exact topic and preserve any objectives supplied there. The uploaded PDF supplies weekly topics but does not supply explicit learning objectives, so when objectives are absent, generate suitable objectives from the exact topic and do not falsely label them as copied from the scheme. For other terms/classes without an uploaded school scheme entry, use the teacher-supplied verified topic and objectives without claiming missing information is officially sourced.
+
+ADDITIONAL LENGTH RULE: The LESSON CONTENT must normally be substantial (at least 700 words when the topic permits). Do not pad it with generic sentences. Spend the words teaching the subject matter: definitions, explanations, classifications, examples, relationships, applications and relevant facts. For simple language topics, include several worked examples and explanations.
+
+SEPARATION RULE: Do not put Teacher's Activities or Pupils' Activities inside LESSON CONTENT. Those belong only in PRESENTATION.
+
+Return Markdown only. Do not add commentary before or after the lesson note.
+`;
+
+function geminiErrorDetails(err) {
+  const status = Number(err?.status || err?.statusCode || err?.response?.status || 0);
+  const code = String(err?.code || err?.error?.code || err?.response?.data?.error?.status || "").toLowerCase();
+  const message = String(err?.message || err?.error?.message || err?.response?.data?.error?.message || "").toLowerCase();
+  return { status, code, message };
+}
+
+function geminiErrorMessage(err) {
+  const { status, code, message } = geminiErrorDetails(err);
+  if (status === 503 || code.includes("unavailable") || message.includes("high demand") || message.includes("temporarily overloaded")) {
+    return "Gemini is temporarily experiencing high demand. The server already retried the request. Please try generating the lesson again in a little while.";
+  }
+  if (status === 401 || status === 403 || message.includes("api key") || message.includes("authentication")) {
+    return "The Gemini API key is invalid, restricted, or not permitted to use the Gemini API. Create/check the Gemini API key in Google AI Studio and update GEMINI_API_KEY in Render, then redeploy.";
+  }
+  if (status === 429 || message.includes("quota") || message.includes("rate limit") || message.includes("resource exhausted")) {
+    return "The Gemini API free-tier rate limit or quota was reached. Please wait and try again, or use a Gemini API project with additional quota.";
+  }
+  if (status === 404 || message.includes("not found") || (message.includes("model") && !message.includes("high demand"))) {
+    return `The configured Gemini model (${model}) is not available to this API project. Set GEMINI_MODEL to an available Gemini model.`;
+  }
+  if (message.includes("billing") || message.includes("payment")) {
+    return "The Gemini API project has a billing or quota restriction. Check the API project in Google AI Studio/Google Cloud and its quota settings.";
+  }
+  if (err?.name === "AbortError" || code.includes("timeout") || message.includes("timed out")) return "The AI request took too long. Please try again.";
+  return "The Gemini AI service could not complete the request. Please try again and check the Gemini API key and model configuration if the problem continues.";
+}
+
+function shouldTryGeminiFallback(err) {
+  const { status, code, message } = geminiErrorDetails(err);
+  if (status === 401 || status === 403 || status === 429 || message.includes("quota") || message.includes("rate limit") || message.includes("resource exhausted")) return false;
+  return status === 503 || code.includes("unavailable") || status === 404 || message.includes("model") || message.includes("not found") || code.includes("model");
+}
+
+function isTransientGeminiError(err) {
+  const { status, code, message } = geminiErrorDetails(err);
+  // IMPORTANT: never retry 429 quota/rate-limit errors. Once Google says the
+  // project's quota is exhausted, another API call cannot fix it and can only
+  // waste additional quota.
+  if (status === 429 || message.includes("quota") || message.includes("rate limit") || message.includes("resource exhausted")) return false;
+  return status === 408 || status === 500 || status === 502 || status === 503 || status === 504 || code.includes("unavailable") || message.includes("high demand") || message.includes("temporarily overloaded");
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function generateGeminiText({ prompt, instructions = "", modelName = model, maxOutputTokens = 12000, json = false }) {
+  const apiKey = process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) throw new Error("GEMINI_API_KEY is missing.");
+  const ai = new GoogleGenAI({ apiKey });
+  // Gemini 3.8 Flash recommends omitting legacy sampling parameters such as temperature.
+  const config = { systemInstruction: instructions || undefined, maxOutputTokens };
+  if (json) config.responseMimeType = "application/json";
+
+  let lastErr;
+  const delays = [1500, 3000, 6000, 12000];
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    try {
+      const response = await ai.models.generateContent({ model: modelName, contents: prompt, config });
+      return String(response?.text || "").trim();
+    } catch (err) {
+      lastErr = err;
+      const details = geminiErrorDetails(err);
+      if (details.status === 429 || details.message.includes("quota") || details.message.includes("rate limit") || details.message.includes("resource exhausted")) {
+        console.warn(`Gemini ${modelName} quota/rate-limit error received; stopping retries immediately.`);
+        throw err;
+      }
+      if (!isTransientGeminiError(err) || attempt === delays.length) throw err;
+      console.warn(`Gemini ${modelName} transient error (attempt ${attempt + 1}/${delays.length + 1}); retrying in ${delays[attempt]}ms.`);
+      await sleep(delays[attempt] + Math.floor(Math.random() * 500));
+    }
+  }
+  throw lastErr;
+}
+
+
+app.post("/api/generate", requireAuth, async (req, res) => {
+  const { date, classLevel, term, subject, week, duration, topic, learningArea, objectives, teachingAids, references, assessmentType } = req.body || {};
+  if (!subjectIsAllowedForSelection(classLevel, term, subject)) {
+    return res.status(400).json({ error: "Please select a subject that is available for the selected class and term." });
+  }
+  const weekNumber = Number(week);
+  if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 12) return res.status(400).json({ error: "Week must be between Week 1 and Week 12." });
+  if (!validISODate(date)) return res.status(400).json({ error: "Please select a valid lesson date." });
+  const safeDate = date;
+  const safeDuration = cleanText(duration, 80);
+  const enteredTopic = cleanText(topic, 500);
+  const enteredObjectives = cleanText(objectives, 5000);
+  if (!safeDuration) return res.status(400).json({ error: "Duration is required." });
+  if (!enteredTopic) return res.status(400).json({ error: "Lagos State scheme topic is required." });
+  const hasUploadedSchemeTopic = term === "First Term" && uploadedFirstTermScheme.classes.includes(classLevel) && Boolean(enteredTopic);
+  if (!enteredObjectives && !hasUploadedSchemeTopic) return res.status(400).json({ error: "Scheme-based learning objectives are required." });
+  if (typeof learningArea !== "undefined" && typeof learningArea !== "string") return res.status(400).json({ error: "Learning area / strand must be text." });
+  if (typeof teachingAids !== "undefined" && typeof teachingAids !== "string") return res.status(400).json({ error: "Teaching aids must be text." });
+  if (typeof references !== "undefined" && typeof references !== "string") return res.status(400).json({ error: "Reference materials must be text." });
+  const safeAssessmentType = allowedAssessmentTypes.has(assessmentType) ? assessmentType : "Oral + written";
+  if (activeGenerations.has(req.user.id)) return res.status(429).json({ error: "A lesson note is already being generated for your account. Please wait for it to finish." });
+  const schemeCatalog = term === "First Term" && uploadedFirstTermScheme.classes.includes(classLevel) ? uploadedFirstTermScheme : lagosScheme;
+  const requestedSourcePage = cleanText(req.body?.schemeSourcePage, 30);
+  const requestedSourceTableId = cleanText(req.body?.schemeSourceTableId, 100);
+  const requestedSourceVolume = cleanText(req.body?.schemeSourceVolume, 60);
+  const schemeEntries = schemeCatalog.entries.filter(e => e.classLevel === classLevel && e.term === term && e.subject === subject && Number(e.week) === weekNumber);
+  const matchingIdentityEntries = schemeEntries.filter(e =>
+    (!requestedSourcePage || String(e.sourcePage || "") === requestedSourcePage) &&
+    (!requestedSourceTableId || String(e.sourceTableId || "") === requestedSourceTableId) &&
+    (!requestedSourceVolume || String(e.sourceVolume || "") === requestedSourceVolume)
+  );
+  const schemeEntry = (matchingIdentityEntries[0] || schemeEntries[0] || null);
+  if (term === "First Term" && uploadedFirstTermScheme.classes.includes(classLevel) && schemeEntries.length && requestedSourceTableId && !matchingIdentityEntries.length) {
+    return res.status(400).json({ error: "The selected scheme entry is no longer available. Please reload the class, subject and week, then try again." });
+  }
+  if (schemeEntries.some(e => e.isBreak)) return res.status(400).json({ error: "The selected week is a test/break week in the loaded scheme. Please select a teaching week." });
+  if (schemeEntry && schemeEntries.some(e => !e.topic || !e.source)) return res.status(500).json({ error: "That curriculum entry is incomplete. Please contact the school administrator." });
+  activeGenerations.add(req.user.id);
+  const payload = {
+    school: curriculum.school,
+    teacherName: req.user.name,
+    date: safeDate,
+    classLevel, term, subject, topic: enteredTopic, week: weekNumber, duration: safeDuration,
+    learningArea: cleanText(learningArea, 300), objectives: enteredObjectives, teachingAids: cleanText(teachingAids, 2000),
+    references: cleanText(references, 2000), assessmentType: safeAssessmentType,
+    schemeTopic: schemeEntry?.topic || "", schemeObjectives: schemeEntry?.objectives || [], schemeSource: schemeEntry?.source || "", schemeSourceUrl: schemeEntry?.sourceUrl || "",
+    schemeSourcePage: schemeEntry?.sourcePage || "", schemeSourceTableId: schemeEntry?.sourceTableId || "", schemeSourceVolume: schemeEntry?.sourceVolume || "", schemeSourceSubject: schemeEntry?.sourceSubject || "",
+    schemeEntryLoaded: Boolean(schemeEntry)
+  };
+  try {
+    if (!process.env.GEMINI_API_KEY?.trim()) {
+      return res.status(503).json({ error: "AI lesson generation is not configured. Please set a valid GEMINI_API_KEY in Render and try again." });
+    }
+
+    const instructions = LESSON_WRITER_INSTRUCTIONS;
+    const generatedNote = await generateGeminiText({ modelName: model, instructions, prompt: JSON.stringify(payload), maxOutputTokens: 12000 });
+    if (!generatedNote) throw Object.assign(new Error("The AI service returned an empty lesson note."), { code: "empty_output" });
+    if (lessonLooksGeneric(generatedNote, payload)) {
+      const rewritten = await generateGeminiText({
+        modelName: model,
+        instructions: `${LESSON_WRITER_INSTRUCTIONS}
+
+QUALITY CONTROL: The previous draft was too generic. Rewrite it completely. The LESSON CONTENT must contain actual topic-specific knowledge, not instructions to the teacher. Do not reuse generic template paragraphs. Every evaluation and assignment item must be answerable from the factual content you write.`,
+        prompt: JSON.stringify({ ...payload, previousDraft: generatedNote }),
+        maxOutputTokens: 14000
+      });
+      if (!rewritten || lessonLooksGeneric(rewritten, payload)) {
+        throw Object.assign(new Error("The AI returned a lesson note that did not contain enough topic-specific teaching content."), { code: "low_quality_output" });
+      }
+      return res.json({ note: rewritten, mode: "ai" });
+    }
+    return res.json({ note: generatedNote, mode: "ai" });
+  } catch (err) {
+    console.error("Lesson generation error:", err);
+    // A 503 means Gemini is temporarily out of serving capacity. The primary
+    // model has already completed its bounded retry cycle above; now explicitly
+    // move to the fallback model instead of returning the primary error.
+    const canFallback = shouldTryGeminiFallback(err) && fallbackModel && fallbackModel !== model && process.env.GEMINI_API_KEY?.trim();
+    if (canFallback) {
+      console.warn(`Primary Gemini model ${model} failed with a retryable error. Switching to fallback model ${fallbackModel}.`);
+      try {
+        const fallbackNote = await generateGeminiText({
+          modelName: fallbackModel,
+          instructions: `${LESSON_WRITER_INSTRUCTIONS}\n\nFALLBACK REQUEST: Write the actual lesson. Do not summarize the task, describe teaching actions, or use generic filler. The LESSON CONTENT must contain concrete subject knowledge for the exact topic and class.`,
+          prompt: JSON.stringify(payload),
+          maxOutputTokens: 12000
+        });
+        if (fallbackNote && !lessonLooksGeneric(fallbackNote, payload)) {
+          console.info(`Gemini fallback model ${fallbackModel} generated the lesson successfully.`);
+          return res.json({ note: fallbackNote, mode: "ai-fallback" });
+        }
+        console.error(`Gemini fallback model ${fallbackModel} returned an empty or low-quality lesson.`);
+      } catch (fallbackErr) {
+        console.error(`Fallback lesson generation error (${fallbackModel}):`, fallbackErr);
+        // Keep the original error as the final diagnostic because it identifies
+        // the primary capacity failure that triggered the fallback.
+      }
+    } else {
+      console.warn(`Gemini fallback not attempted. primary=${model}, fallback=${fallbackModel || "<not configured>"}, canFallback=${Boolean(canFallback)}.`);
+    }
+    // Never return the old generic filler as if it were a completed lesson note.
+    // A teacher must receive real topic-specific teaching content from the AI, or
+    // a clear actionable error when the AI service is unavailable.
+    return res.status(503).json({
+      error: geminiErrorMessage(err)
+    });
+  } finally {
+    activeGenerations.delete(req.user.id);
+  }
+});
+
+
+const EXAM_GENERATOR_INSTRUCTIONS = `
+You are the examination-question writer for DESTINY ACHIEVERS FOUNDATION SCHOOL (DAFS), a Nigerian primary school.
+Create examination questions strictly from the supplied saved lesson notes for ONE subject. The saved lesson notes are the source of truth.
+Use the full supplied notes across the selected weeks. Do not introduce advanced topics that were not taught in those notes.
+The paper must be age-appropriate for the selected Basic class and must have four options A-D for every objective question, with exactly one correct answer.
+Theory questions must also be answerable from the supplied lesson notes. Do not include answer keys in the returned paper.
+Keep questions clear, grammatically correct and varied: recall, understanding, application, simple calculation where relevant, spelling/grammar practice where relevant, and short practical situations where appropriate.
+Avoid duplicate questions and avoid trick questions.
+Return ONLY valid JSON in this shape:
+{
+  "sections": [
+    {
+      "subject": "English Studies",
+      "mcq": [{"question":"...","options":{"A":"...","B":"...","C":"...","D":"..."}}],
+      "theory": [{"question":"...","marks":5}]
+    }
+  ]
+}
+There must be exactly one section for the requested subject, exactly the requested number of objective questions, and exactly the requested number of theory questions.
+Do not add markdown fences or commentary.
+`;
+
+function parseExamJson(text) {
+  const raw = String(text || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try { return JSON.parse(raw); } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start >= 0 && end > start) return JSON.parse(raw.slice(start, end + 1));
+    throw new Error("The AI returned an invalid examination format.");
+  }
+}
+function validateExamShape(exam, subjects, mcqCount, theoryCount) {
+  if (!exam || !Array.isArray(exam.sections) || exam.sections.length !== subjects.length) return false;
+  const bySubject = new Map(exam.sections.map(s => [String(s.subject || ""), s]));
+  for (const subject of subjects) {
+    const s = bySubject.get(subject);
+    if (!s || !Array.isArray(s.mcq) || !Array.isArray(s.theory) || s.mcq.length !== mcqCount || s.theory.length !== theoryCount) return false;
+    for (const q of s.mcq) {
+      if (!q?.question || !q?.options || !q.options.A || !q.options.B || !q.options.C || !q.options.D) return false;
+    }
+    for (const q of s.theory) if (!q?.question) return false;
+  }
+  return true;
+}
+function safeExamText(value, max = 500) { return cleanText(value, max); }
+function examSourceQuery(req) {
+  const classLevel = safeExamText(req.query?.classLevel, 50);
+  const term = safeExamText(req.query?.term, 50);
+  const subjects = Array.isArray(req.query?.subject) ? req.query.subject : (req.query?.subject ? [req.query.subject] : []);
+  return { classLevel, term, subjects: subjects.map(x => safeExamText(x, 100)).filter(Boolean) };
+}
+
+app.get("/api/exam/source-notes", requireAuth, async (req, res) => {
+  const { classLevel, term, subjects } = examSourceQuery(req);
+  if (!curriculum.classes.includes(classLevel) || !curriculum.terms.includes(term)) return res.status(400).json({ error: "Please select a valid class and term." });
+  if (!subjects.length || subjects.some(s => !curriculum.subjects.includes(s) || !subjectIsAllowedForSelection(classLevel, term, s))) return res.status(400).json({ error: "Please select subjects available for the selected class and term." });
+  const params = [classLevel, term, subjects];
+  let sql = `SELECT id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,created_at AS "createdAt" FROM notes WHERE meta->>'classLevel'=$1 AND meta->>'term'=$2 AND meta->>'subject'=ANY($3::text[])`;
+  if (req.user.role !== "admin") { sql += " AND teacher_id=$4"; params.push(req.user.id); }
+  sql += " ORDER BY (meta->>'subject'), NULLIF(meta->>'week','')::int NULLS LAST, created_at ASC";
+  const { rows } = await dbQuery(sql, params);
+  res.json({ notes: rows });
+});
+
+app.post("/api/exam/generate", requireAuth, async (req, res) => {
+  const { classLevel, term, subjects, noteIds, title, date, duration, mcqCount, theoryCount } = req.body || {};
+  if (!curriculum.classes.includes(classLevel) || !curriculum.terms.includes(term)) return res.status(400).json({ error: "Please select a valid class and term." });
+  if (!Array.isArray(subjects) || !subjects.length || subjects.length > curriculum.subjects.length || subjects.some(s => !curriculum.subjects.includes(s))) return res.status(400).json({ error: "Please select valid subjects." });
+  if (!Array.isArray(noteIds) || !noteIds.length || noteIds.length > 500) return res.status(400).json({ error: "Please select at least one saved lesson note and no more than 500 notes at once." });
+  const mcq = Number(mcqCount), theory = Number(theoryCount);
+  if (!Number.isInteger(mcq) || mcq < 5 || mcq > 50 || !Number.isInteger(theory) || theory < 2 || theory > 15) return res.status(400).json({ error: "Question counts are outside the allowed range." });
+  if (date && !validISODate(date)) return res.status(400).json({ error: "Please select a valid examination date." });
+  if (!process.env.GEMINI_API_KEY?.trim()) return res.status(503).json({ error: "AI examination generation is not configured. Please set a valid GEMINI_API_KEY in Render." });
+  if (activeExamGenerations.has(req.user.id)) return res.status(429).json({ error: "An examination is already being generated for your account. Please wait for it to finish." });
+  activeExamGenerations.add(req.user.id);
+
+  const uniqueIds = [...new Set(noteIds.map(x => String(x).slice(0, 100)))];
+  const params = [uniqueIds];
+  let sql = `SELECT id,teacher_id AS "teacherId",teacher_name AS "teacherName",title,meta,content,created_at AS "createdAt" FROM notes WHERE id=ANY($1::text[])`;
+  if (req.user.role !== "admin") { sql += " AND teacher_id=$2"; params.push(req.user.id); }
+  const { rows } = await dbQuery(sql, params);
+  if (!rows.length) { activeExamGenerations.delete(req.user.id); return res.status(404).json({ error: "None of the selected lesson notes are available for your account." }); }
+
+  const allowed = rows.filter(n =>
+    curriculum.classes.includes(n.meta?.classLevel) &&
+    curriculum.terms.includes(n.meta?.term) &&
+    curriculum.subjects.includes(n.meta?.subject) &&
+    n.meta?.classLevel === classLevel &&
+    n.meta?.term === term &&
+    subjects.includes(n.meta?.subject)
+  );
+  if (!allowed.length) { activeExamGenerations.delete(req.user.id); return res.status(400).json({ error: "The selected lesson notes do not match the examination class, term and subjects." }); }
+
+  const grouped = new Map(subjects.map(subject => [subject, []]));
+  for (const note of allowed) grouped.get(note.meta?.subject)?.push(note);
+  const missing = subjects.filter(subject => !(grouped.get(subject)?.length));
+  if (missing.length) { activeExamGenerations.delete(req.user.id); return res.status(400).json({ error: `No saved lesson notes were found for: ${missing.join(", ")}. Generate and save the missing subject weeks first.` }); }
+
+  const requestedTitle = safeExamText(title, 200) || `${classLevel} EXAMINATION`;
+  const subjectLine = subjects.join(" AND ").toUpperCase();
+  const safeDuration = safeExamText(duration, 80);
+  const safeModel = model;
+  const safeFallbackModel = fallbackModel;
+
+  function buildSubjectSource(subject, notes) {
+    let used = 0;
+    const maxChars = 120000;
+    const blocks = [];
+    const sorted = [...notes].sort((a,b) => Number(a.meta?.week || 999) - Number(b.meta?.week || 999) || new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    for (const n of sorted) {
+      const header = `\n--- SAVED LESSON NOTE | ${subject} | Week ${n.meta?.week || ""} | ${n.meta?.classLevel || ""} | ${n.meta?.term || ""} | ${n.teacherName || ""} ---\n`;
+      const remaining = maxChars - used - header.length;
+      if (remaining <= 0) break;
+      const content = String(n.content || "").slice(0, remaining);
+      if (!content.trim()) continue;
+      blocks.push(header + content);
+      used += header.length + content.length;
+    }
+    return blocks.join("\n");
+  }
+
+  async function generateForSubject(subject) {
+    const sourceNotes = grouped.get(subject) || [];
+    const sourceText = buildSubjectSource(subject, sourceNotes);
+    if (sourceText.length < 500) throw new Error(`The saved lesson notes for ${subject} do not contain enough lesson content.`);
+    const payload = {
+      school: curriculum.school,
+      classLevel,
+      term,
+      subject,
+      title: requestedTitle,
+      date: date || "",
+      duration: safeDuration,
+      mcqCount: mcq,
+      theoryCount: theory,
+      sourceNoteCount: sourceNotes.length,
+      sourceWeeks: sourceNotes.map(n => Number(n.meta?.week)).filter(Number.isInteger).sort((a,b) => a-b),
+      sourceNotes: sourceText
+    };
+
+    async function call(modelName, extra = "") {
+      const text = await generateGeminiText({
+        modelName,
+        instructions: `${EXAM_GENERATOR_INSTRUCTIONS}\n\nREQUESTED SUBJECT: ${subject}\n${extra}`,
+        prompt: JSON.stringify(payload),
+        maxOutputTokens: Math.min(16000, Math.max(6000, (mcq * 90) + (theory * 140) + 1500)),
+        json: true
+      });
+      return parseExamJson(text);
+    }
+
+    let exam = null;
+    let lastErr = null;
+    const modelAttempts = [safeModel, ...(safeFallbackModel && safeFallbackModel !== safeModel ? [safeFallbackModel] : [])];
+    for (const modelName of modelAttempts) {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          exam = await call(modelName, attempt === 0 ? "" : "QUALITY CONTROL: The previous response did not match the required JSON counts or structure. Return valid JSON only with exactly the requested number of objective and theory questions.");
+          if (validateExamShape(exam, [subject], mcq, theory)) return exam.sections[0];
+          lastErr = new Error(`The AI returned an incomplete examination format for ${subject}.`);
+        } catch (err) {
+          lastErr = err;
+          console.error(`Examination generation attempt failed for ${subject} using ${modelName}:`, err);
+          break;
+        }
+      }
+    }
+    throw lastErr || new Error(`The AI did not return the complete examination format for ${subject}.`);
+  }
+
+  try {
+    // Generate each subject independently so every selected subject can use all of
+    // its saved weekly notes without truncating other subjects or exceeding output limits.
+    const sections = [];
+    const concurrency = Math.min(3, subjects.length);
+    for (let i = 0; i < subjects.length; i += concurrency) {
+      const batch = subjects.slice(i, i + concurrency);
+      const results = await Promise.all(batch.map(subject => generateForSubject(subject)));
+      sections.push(...results);
+    }
+    const exam = {
+      title: requestedTitle,
+      date: date || "",
+      duration: safeDuration,
+      classLevel,
+      term,
+      subjectLine,
+      sections,
+      sourceNoteCount: allowed.length,
+      sourceWeeks: [...new Set(allowed.map(n => Number(n.meta?.week)).filter(Number.isInteger))].sort((a,b) => a-b)
+    };
+    return res.json({ exam });
+  } catch (err) {
+    console.error("Examination generation error:", err);
+    return res.status(503).json({ error: geminiErrorMessage(err).replace("lesson note", "examination") });
+  } finally {
+    activeExamGenerations.delete(req.user.id);
+  }
+});
+
+function examDocxQuestionNumbered(number, q) {
+  return new Paragraph({ spacing: { after: 120 }, children: [
+    new TextRun({ text: `${number}. `, bold: true, size: 28 }),
+    new TextRun({ text: String(q.question || ""), bold: true, size: 28 }),
+    new TextRun({ text: `  A. ${q.options?.A || ""}    B. ${q.options?.B || ""}    C. ${q.options?.C || ""}    D. ${q.options?.D || ""}`, bold: true, size: 28 })
+  ]});
+}
+function examDocxTheory(number, q) {
+  return [
+    new Paragraph({ spacing: { after: 100 }, children: [new TextRun({ text: `${number}. `, bold: true, size: 28 }), new TextRun({ text: String(q.question || ""), bold: true, size: 28 }), q.marks ? new TextRun({ text: ` (${q.marks} marks)`, bold: true, size: 28 }) : new TextRun({ text: "", size: 28 })] }),
+    new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: "________________________________________________________________________________", bold: true, size: 28 }) ] }),
+    new Paragraph({ spacing: { after: 180 }, children: [new TextRun({ text: "________________________________________________________________________________", bold: true, size: 28 }) ] })
+  ];
+}
+
+app.post("/api/exam/docx", requireAuth, async (req, res) => {
+  const exam = req.body?.exam;
+  if (!exam || !Array.isArray(exam.sections) || !exam.sections.length) return res.status(400).json({ error: "There is no examination to download." });
+  const title = safeExamText(exam.title, 200) || "DAFS Examination";
+  const subjectLine = safeExamText(exam.subjectLine, 300);
+  const logoPath = path.join(__dirname, "public", "logo.png");
+  const children = [];
+  const logo = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null;
+  const headerTable = new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: { top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }, bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }, left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }, right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }, insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" }, insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" } },
+    rows: [new TableRow({ children: [
+      new TableCell({ width: { size: 18, type: WidthType.PERCENTAGE }, children: [logo ? new Paragraph({ children: [new ImageRun({ data: logo, transformation: { width: 78, height: 78 }, type: "png" })] }) : new Paragraph("")] }),
+      new TableCell({ width: { size: 82, type: WidthType.PERCENTAGE }, children: [
+        new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: "DESTINY ACHIEVERS FOUNDATION SCHOOL", bold: true, size: 28 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 90 }, children: [new TextRun({ text: title, bold: true, size: 28 })] }),
+        new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 70 }, children: [new TextRun({ text: subjectLine, bold: true, size: 28 })] })
+      ]})
+    ]})]
+  });
+  children.push(headerTable);
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 120, after: 140 }, children: [new TextRun({ text: "Name: ______________________________     Date: " + (safeExamText(exam.date, 40) || "________________"), bold: true, size: 28 })] }));
+  if (exam.duration) children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 140 }, children: [new TextRun({ text: `Duration: ${exam.duration}`, bold: true, size: 28 })] }));
+  let number = 1;
+  for (const section of exam.sections) {
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 160, after: 80 }, children: [new TextRun({ text: String(section.subject || "").toUpperCase(), bold: true, size: 28 })] }));
+    children.push(new Paragraph({ spacing: { after: 100 }, children: [new TextRun({ text: "Instruction: Choose the correct answer.", bold: true, size: 28 })] }));
+    for (const q of section.mcq || []) children.push(examDocxQuestionNumbered(number++, q));
+  }
+  children.push(new Paragraph({ children: [new PageBreak()] }));
+  children.push(new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 120 }, children: [new TextRun({ text: "THEORY", bold: true, size: 28 })] }));
+  children.push(new Paragraph({ spacing: { after: 150 }, children: [new TextRun({ text: "Instruction: Answer all the questions.", bold: true, size: 28 })] }));
+  let theoryNo = 1;
+  for (const section of exam.sections) {
+    if (!section.theory?.length) continue;
+    children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, spacing: { before: 150, after: 90 }, children: [new TextRun({ text: String(section.subject || "").toUpperCase(), bold: true, size: 28 })] }));
+    for (const q of section.theory) children.push(...examDocxTheory(theoryNo++, q));
+  }
+  const doc = new Document({ styles: { default: { document: { run: { size: 28, bold: true, font: "Times New Roman" } } } }, sections: [{ properties: { page: { margin: { top: 650, right: 650, bottom: 650, left: 650 } } }, children }] });
+  const buffer = await Packer.toBuffer(doc);
+  const fileName = title.replace(/[^a-z0-9_-]+/gi, "_").replace(/^_+|_+$/g, "") || "DAFS_Examination";
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  res.setHeader("Content-Disposition", `attachment; filename="${fileName}.docx"`);
+  res.send(buffer);
+});
+
+// Keep unexpected server details out of teacher-facing responses.
+app.use("/api", (req, res, next) => {
+  res.status(404).json({ error: "The requested service is not available." });
+});
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  if (req.path.startsWith("/api/")) return res.status(500).json({ error: "Something went wrong. Please try again." });
+  res.status(500).send("Something went wrong. Please try again.");
+});
+
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+
+const invalidSchemeEntries = lagosScheme.entries.filter(e => !e.classLevel || !e.term || !e.subject || !Number.isInteger(Number(e.week)) || Number(e.week) < 1 || Number(e.week) > 12 || !e.topic || !e.source);
+if (invalidSchemeEntries.length) throw new Error("The loaded curriculum catalog contains incomplete entries.");
+await initDatabase();
+await ensureAdmin();
+app.listen(port, "0.0.0.0", () => console.log(`DAFS Lesson Note AI listening on port ${port}`));

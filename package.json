@@ -1,0 +1,26 @@
+{
+  "name": "dafs-ai-lesson-note",
+  "version": "3.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "audit": "node audit.mjs"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "connect-pg-simple": "^10.0.0",
+    "docx": "^9.5.1",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "pg": "^8.16.3",
+    "@google/genai": "^1.29.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
