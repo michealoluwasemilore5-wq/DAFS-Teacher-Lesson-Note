@@ -494,9 +494,9 @@ function lessonLooksGeneric(note, payload) {
   ].reduce((n, re) => n + (content.match(re) || []).length, 0);
 
   if (genericHits >= 1) return true;
-  if (topic && topicMentions < 3) return true;
-  if (content.trim().length < 1200) return true;
-  if (factualSignals < 7) return true;
+  if (topic && topicMentions < 1) return true;
+  if (content.trim().length < 500) return true;
+  if (factualSignals < 3) return true;
   if (/teacher.?s activities|pupils.? activities|the teacher will|the teacher should|pupils will/i.test(content)) return true;
   if (/\b(learn what|understand what|main idea selected|develops this point|important part of this lesson)\b/i.test(content)) return true;
   return false;
