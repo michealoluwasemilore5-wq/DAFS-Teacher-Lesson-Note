@@ -607,42 +607,84 @@ async function generateGeminiText({ prompt, instructions = "", modelName = model
 
 async function generateHfText({ prompt, instructions = "" }) {
   const token = process.env.HUGGINGFACE_API_KEY?.trim();
-  const hfModel = process.env.HF_MODEL?.trim() || "google/flan-t5-large";
-  if (!token) throw new Error("HUGGINGFACE_API_KEY is missing.");
-  const url = `https://api-inference.huggingface.co/models/${encodeURIComponent(hfModel)}`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      inputs: `${instructions}\n\n${prompt}`,
-      parameters: {
-        max_new_tokens: 1800,
-        temperature: 0.7,
-        do_sample: true,
-        return_full_text: false
-      }
-    })
-  });
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Hugging Face error: ${response.status} ${text}`);
-  }
-  const data = await response.json();
-  if (Array.isArray(data)) {
-    return String(data[0]?.generated_text || data[0]?.summary_text || "").trim();
-  }
-  if (data && typeof data === "object") {
-    return String(data.generated_text || data.summary_text || data.text || "").trim();
-  }
-  return "";
-}
+  const hfModel = process.env.HF_MODEL?.trim() || "Qwen/Qwen2.5-7B-Instruct";
 
-app.post("/api/generate", requireAuth, async (req, res) => {
-  const { date, classLevel, term, subject, week, duration, topic, learningArea, objectives, teachingAids, references, assessmentType } = req.body || {};
-  if (!subjectIsAllowedForSelection(classLevel, term, subject)) {
+  if (!token) {
+    throw new Error("HUGGINGFACE_API_KEY is missing.");
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 90000);
+
+  try {
+    const response = await fetch(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          model: hfModel,
+          messages: [
+            {
+              role: "system",
+              content: `${instructions}
+
+Write a complete, detailed Nigerian primary-school lesson note.
+Teach the actual topic with factual explanations, examples,
+definitions, and numbered points.
+
+Include:
+TEACHER'S NAME, CLASS, DATE, SUBJECT, WEEK, TOPIC,
+DURATION, LEARNING OBJECTIVES, INSTRUCTIONAL MATERIALS,
+REFERENCE MATERIALS, LESSON CONTENT, PRESENTATION,
+EVALUATION, CONCLUSION, and ASSIGNMENT.
+
+Do not use generic filler or merely describe what the teacher
+should teach. Make the lesson content specific to the supplied
+topic and appropriate for the selected class.`
+            },
+            {
+              role: "user",
+              content: prompt
+            }
+          ],
+          max_tokens: 5000,
+          temperature: 0.4
+        })
+      }
+    );
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `Hugging Face error ${response.status}: ${responseText.slice(0, 1000)}`
+      );
+    }
+
+    let data;
+
+    try {
+      data = JSON.parse(responseText);
+    } catch {
+      throw new Error("Hugging Face returned an invalid JSON response.");
+    }
+
+    const content = data?.choices?.[0]?.message?.content;
+
+    if (typeof content !== "string" || !content.trim()) {
+      throw new Error("Hugging Face returned an empty lesson note.");
+    }
+
+    return content.trim();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
     return res.status(400).json({ error: "Please select a subject that is available for the selected class and term." });
   }
   const weekNumber = Number(week);
