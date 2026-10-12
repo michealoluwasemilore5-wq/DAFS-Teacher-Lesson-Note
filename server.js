@@ -758,7 +758,10 @@ QUALITY CONTROL: The previous draft was too generic. Rewrite it completely. The 
   } catch (err) {
     console.error("Lesson generation error:", err);
 
-    const canFallback = shouldTryGeminiFallback(err) && fallbackModel && fallbackModel !== model && process.env.GEMINI_API_KEY?.trim();
+    const canFallback =
+  (shouldTryGeminiFallback(err) || err?.code === "low_quality_output") &&
+  Boolean(fallbackModel) &&
+  Boolean(process.env.GEMINI_API_KEY?.trim());
     if (canFallback) {
       console.warn(`Primary Gemini model ${model} failed with a retryable error. Switching to fallback model ${fallbackModel}.`);
       try {
