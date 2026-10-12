@@ -685,7 +685,26 @@ topic and appropriate for the selected class.`
     clearTimeout(timeout);
   }
 }
-    return res.status(400).json({ error: "Please select a subject that is available for the selected class and term." });
+    app.post("/api/generate", requireAuth, async (req, res) => {
+  const {
+    date,
+    classLevel,
+    term,
+    subject,
+    week,
+    duration,
+    topic,
+    learningArea,
+    objectives,
+    teachingAids,
+    references,
+    assessmentType
+  } = req.body || {};
+
+  if (!subjectIsAllowedForSelection(classLevel, term, subject)) {
+    return res.status(400).json({
+      error: "Please select a subject that is available for the selected class and term."
+    });
   }
   const weekNumber = Number(week);
   if (!Number.isInteger(weekNumber) || weekNumber < 1 || weekNumber > 12) return res.status(400).json({ error: "Week must be between Week 1 and Week 12." });
