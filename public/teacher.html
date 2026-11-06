@@ -1,0 +1,35 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DAFS • Teacher Dashboard</title><link rel="stylesheet" href="./styles.css"></head><body>
+<header class="topbar">
+<div class="brand"><img src="./logo.png" alt="DAFS logo"><div><strong>DAFS Lesson Note AI</strong><span>Destiny Achievers Foundation School</span></div></div>
+<div class="top-actions"><span id="userBadge" class="user-badge"></span><button class="menu" id="menuBtn" type="button" aria-label="Open navigation menu" aria-expanded="false" aria-controls="menuDrawer">☰</button></div>
+</header>
+<div class="menu-drawer-backdrop" id="menuBackdrop"></div>
+<aside class="menu-drawer" id="menuDrawer" aria-hidden="true">
+  <div class="drawer-head">
+    <div><span class="eyebrow">DAFS MENU</span><strong>Account & Navigation</strong></div>
+    <button class="drawer-close" id="drawerClose" aria-label="Close menu">×</button>
+  </div>
+  <div class="drawer-user">
+    <span class="drawer-avatar" id="drawerAvatar">T</span>
+    <div><b id="drawerUserName">Teacher</b><small id="drawerUserRole">Teacher</small></div>
+  </div>
+  <nav class="drawer-nav">
+    <a href="./teacher.html">⌂ <span>Dashboard</span></a>
+    <a href="./generator.html">✦ <span>Generate Lesson</span></a>
+    <a href="./notes.html">▤ <span>My Lesson Notes</span></a><a href="./exam.html">▣ <span>Generate Examination</span></a>
+    <a class="drawer-admin hidden" id="drawerAdminLink" href="./admin.html">♙ <span>Principal Admin</span></a>
+  </nav>
+  <div class="drawer-footer">
+    <button class="drawer-logout" id="logoutBtn"><span>↪</span> Log out</button>
+  </div>
+</aside><div class="layout"><aside class="sidebar">
+<div class="side-school"><img src="./logo.png" alt="DAFS logo"><b>DAFS PORTAL</b><small id="sideRole">Teacher</small></div>
+<a class="nav" href="./teacher.html">⌂ <span>Dashboard</span></a>
+<a class="nav" href="./generator.html">✦ <span>Generate Lesson</span></a>
+<a class="nav" href="./notes.html">▤ <span>My Lesson Notes</span></a><a class="nav" href="./exam.html">▣ <span>Generate Examination</span></a>
+<div class="side-bottom">Knowledge is enlightening</div>
+</aside><main class="content">
+<div id="dashboardError" class="alert" style="margin-bottom:16px"></div><section class="page"><div class="welcome"><div><span class="eyebrow">TEACHER DASHBOARD</span><h1>Good day, <span id="welcomeName">Teacher</span> 👋</h1><p>Create structured lesson notes for KG 1, KG 2, Nursery 1, Nursery 2 and Primary 1–5 with AI assistance.</p></div><a class="primary" href="./generator.html">＋ New Lesson Note</a></div>
+<div class="cards"><div class="metric"><span>My lesson notes</span><b id="myCount">0</b><small>Saved to your account</small></div><div class="metric"><span>Classes</span><b>9</b><small>KG 1 – Primary 5</small></div><div class="metric"><span>Terms</span><b>3</b><small>First • Second • Third</small></div></div></section>
+<section class="panel"><div class="section-title"><div><span class="eyebrow">QUICK ACTIONS</span><h2>Start working</h2></div></div><div class="cards"><a class="metric" href="./generator.html" style="text-decoration:none;color:inherit"><span>✦ Generate</span><b>Lesson Note</b><small>Choose class, term and subject.</small></a><a class="metric" href="./notes.html" style="text-decoration:none;color:inherit"><span>▤ Open</span><b>My Notes</b><small>View all your saved lesson notes.</small></a><a class="metric" href="./exam.html" style="text-decoration:none;color:inherit"><span>▣ Create</span><b>Examination</b><small>Build an exam from saved weekly notes.</small></a><div class="metric"><span>AI</span><b>Teacher Assistant</b><small>Generate detailed classroom-ready content.</small></div></div></section>
+</main></div><footer>DESTINY ACHIEVERS FOUNDATION SCHOOL • Knowledge is enlightening</footer><script src="./teacher.js"></script></body></html>

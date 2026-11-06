@@ -1,0 +1,835 @@
+{
+  "version": "public-reference-2021",
+  "schoolSystem": "Lagos State Government Ministry of Education Unified Schemes of Work for Primary Schools",
+  "note": "Public reference entries loaded into the application. They are not represented as the complete current Lagos State curriculum. Replace or extend with the school’s current official scheme documents before treating the catalog as complete.",
+  "sources": [
+    {
+      "title": "Primary 1 Mathematics",
+      "url": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 1 Basic Science and Technology",
+      "url": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 1 Social Studies",
+      "url": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 1 Home Economics",
+      "url": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 1 Physical and Health Education",
+      "url": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 1 Cultural and Creative Arts",
+      "url": "https://classbasic.com/first-term-second-term-and-third-term-cultural-and-creative-arts-cca-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "title": "Primary 4 Mathematics",
+      "url": "https://syllabus.ng/primary4-scheme-of-work/mathematics/"
+    },
+    {
+      "title": "Primary 4 English Studies",
+      "url": "https://syllabus.ng/primary4-scheme-of-work/english/"
+    },
+    {
+      "title": "Primary 6 English Studies",
+      "url": "https://syllabus.ng/primary6-scheme-of-work/english/"
+    }
+  ],
+  "entries": [
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 1,
+      "topic": "Whole Numbers – Counting, identification and reading of numbers/objects 1–10",
+      "objectives": [
+        "identify numbers from 1–10",
+        "count objects from 1–10",
+        "write numbers that describe quantities"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 2,
+      "topic": "Whole Numbers – Sorting and classification of objects using numbers 1–5",
+      "objectives": [
+        "sort objects according to quantity",
+        "classify objects using numbers 1–5"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 3,
+      "topic": "Whole Numbers – Ordering and writing numbers 1–5 and 5–1",
+      "objectives": [
+        "order numbers from 1–5",
+        "order numbers from 5–1",
+        "write numbers correctly"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 4,
+      "topic": "Whole Number 0 (Zero) – Introducing zero as a number",
+      "objectives": [
+        "identify zero",
+        "explain the meaning of zero",
+        "use zero in simple number situations"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 5,
+      "topic": "Whole Numbers – Identification and reading of numbers 6–9 and 9–6",
+      "objectives": [
+        "identify numbers 6–9",
+        "read numbers 6–9",
+        "count backwards from 9–6"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 6,
+      "topic": "Whole Number 10",
+      "objectives": [
+        "identify number 10",
+        "count ten objects",
+        "write number 10"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 7,
+      "topic": "Counting, reading and writing whole numbers 11–20",
+      "objectives": [
+        "count 11–20",
+        "read 11–20",
+        "write 11–20"
+      ],
+      "source": "Primary 1 Mathematics",
+      "sourceUrl": "https://classbasic.com/first-term-mathematics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 1,
+      "topic": "Living and Non-Living Things – Meaning and identification of living things in the school",
+      "objectives": [
+        "explain living things in simple terms",
+        "identify living things in the school environment"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 2,
+      "topic": "Living and Non-Living Things – Meaning and identification of living things at home",
+      "objectives": [
+        "identify living things at home",
+        "describe simple characteristics of living things"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 3,
+      "topic": "Living and Non-Living Things – Meaning and identification of non-living things in the school",
+      "objectives": [
+        "explain non-living things",
+        "identify non-living things in the school"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 4,
+      "topic": "Exploring Your Environment – Meaning of exploring and types of roads within and outside the school",
+      "objectives": [
+        "explain exploring the environment",
+        "identify common types of roads around the school"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 5,
+      "topic": "Exploring Your Environment – Walking along and across the road",
+      "objectives": [
+        "describe safe ways to walk along a road",
+        "demonstrate safe ways to cross a road"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 6,
+      "topic": "Exploring Your Environment – Things in and around the classroom, school and home",
+      "objectives": [
+        "identify things found in the classroom",
+        "identify things found around school and home"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 7,
+      "topic": "Colour – Identification of shapes with colour",
+      "objectives": [
+        "identify common colours",
+        "match colours with simple shapes"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 8,
+      "topic": "Colour – Uses of colour",
+      "objectives": [
+        "identify uses of colours in everyday life",
+        "describe where different colours are used"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 9,
+      "topic": "Road Traffic Lights Signs and Colours",
+      "objectives": [
+        "identify traffic light colours",
+        "state the meaning of the traffic light colours"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 10,
+      "topic": "Functions of Each Traffic Light Sign Colour",
+      "objectives": [
+        "state the function of each traffic light colour",
+        "demonstrate safe responses to traffic lights"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 11,
+      "topic": "Road Markings and Their Colours",
+      "objectives": [
+        "identify common road markings",
+        "describe the meaning of their colours"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Basic Science",
+      "week": 12,
+      "topic": "Revision and First Term Examination",
+      "objectives": [
+        "revise the major first-term topics",
+        "demonstrate understanding through assessment"
+      ],
+      "source": "Primary 1 Basic Science and Technology",
+      "sourceUrl": "https://classbasic.com/first-term-basic-science-and-technology-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 1,
+      "topic": "Meaning of Social Studies and how man solves his problems",
+      "objectives": [
+        "explain the meaning of Social Studies",
+        "list problems of man",
+        "state ways problems can be solved"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 2,
+      "topic": "Family – Meaning of a family and members of the family",
+      "objectives": [
+        "explain family",
+        "mention members of a family"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 3,
+      "topic": "Nuclear Family – Meaning and structure of a nuclear family",
+      "objectives": [
+        "define nuclear family",
+        "identify members of a nuclear family"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 4,
+      "topic": "Extended Family – Meaning and structure of an extended family",
+      "objectives": [
+        "define extended family",
+        "identify members of an extended family"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 5,
+      "topic": "Qualities of a Good Family",
+      "objectives": [
+        "identify qualities of a good family",
+        "explain why good family qualities are important"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 6,
+      "topic": "Meaning and Types of Culture",
+      "objectives": [
+        "define culture",
+        "identify types or examples of culture"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 7,
+      "topic": "Mid-Term Break",
+      "objectives": [],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/",
+      "isBreak": true
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 8,
+      "topic": "Values That Show Good Morals",
+      "objectives": [
+        "identify values that show good morals",
+        "explain why good morals are important"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 9,
+      "topic": "Values That Show Bad Morals",
+      "objectives": [
+        "identify behaviours that show bad morals",
+        "explain why bad morals should be avoided"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 10,
+      "topic": "Consequences of Bad Morals and How to Curb Them",
+      "objectives": [
+        "state consequences of bad morals",
+        "suggest ways of controlling bad morals"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 11,
+      "topic": "Rewards and Punishment for Good and Bad Morals",
+      "objectives": [
+        "identify rewards for good morals",
+        "identify consequences or punishment for bad morals"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Social Studies",
+      "week": 12,
+      "topic": "Revision and Examination",
+      "objectives": [
+        "revise the major first-term topics",
+        "demonstrate understanding through assessment"
+      ],
+      "source": "Primary 1 Social Studies",
+      "sourceUrl": "https://classbasic.com/first-term-social-studies-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 1,
+      "topic": "The Human Body",
+      "objectives": [
+        "identify the human body",
+        "name familiar parts of the body"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 2,
+      "topic": "Parts of the Body",
+      "objectives": [
+        "identify major parts of the body",
+        "state simple functions of body parts"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 3,
+      "topic": "Reasons for Daily Care of the Body",
+      "objectives": [
+        "state reasons for caring for the body daily",
+        "identify simple daily body-care practices"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 4,
+      "topic": "Materials Used for Care of the Body",
+      "objectives": [
+        "identify materials used for body care",
+        "state uses of selected body-care materials"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 5,
+      "topic": "Care of Each Part of the Body",
+      "objectives": [
+        "describe ways of caring for body parts",
+        "demonstrate appropriate personal care"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 6,
+      "topic": "Care of the Hands and Feet",
+      "objectives": [
+        "state ways of caring for hands and feet",
+        "demonstrate proper hand and foot care"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 7,
+      "topic": "Reasons for Keeping Hands and Feet Clean – When to Wash the Hands and Feet",
+      "objectives": [
+        "state reasons for clean hands and feet",
+        "identify appropriate times to wash them"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 8,
+      "topic": "Proper Ways of Caring for Hands and Feet",
+      "objectives": [
+        "describe proper ways to care for hands and feet",
+        "demonstrate safe cleaning practices"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 9,
+      "topic": "Care and Functions of the Mouth, Teeth and Tongue",
+      "objectives": [
+        "identify functions of the mouth, teeth and tongue",
+        "describe simple care practices"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 10,
+      "topic": "Reasons for Cleaning the Mouth, Teeth and Tongue – Materials Used",
+      "objectives": [
+        "state reasons for oral cleaning",
+        "identify materials used for cleaning the mouth and teeth"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 11,
+      "topic": "Ways of Caring for the Mouth, Teeth and Tongue – Causes and Prevention of Tooth Decay",
+      "objectives": [
+        "state ways of caring for the mouth and teeth",
+        "identify causes of tooth decay",
+        "state ways of preventing tooth decay"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Home Economics",
+      "week": 12,
+      "topic": "Revision",
+      "objectives": [
+        "revise major first-term topics",
+        "answer revision questions"
+      ],
+      "source": "Primary 1 Home Economics",
+      "sourceUrl": "https://classbasic.com/first-term-home-economics-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 1,
+      "topic": "Basic Movements – Moving Our Body Parts",
+      "objectives": [
+        "identify basic body movements",
+        "demonstrate simple movements safely"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 2,
+      "topic": "Basic Movements – Moving Our Body Parts",
+      "objectives": [
+        "demonstrate movements of different body parts",
+        "observe safety during movement activities"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 3,
+      "topic": "Basic Movements – Throwing of Objects",
+      "objectives": [
+        "demonstrate basic throwing skills",
+        "observe safety rules when throwing"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 4,
+      "topic": "Basic Movements – Catching of Objects and Striking a Ball",
+      "objectives": [
+        "demonstrate basic catching",
+        "demonstrate simple striking skills"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 5,
+      "topic": "Safety Rules for Basic Movements",
+      "objectives": [
+        "state safety rules for basic movements",
+        "apply safety rules during activities"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 6,
+      "topic": "Athletics – Meaning of Short Distance Race, Benefits of Running and Safety Rules",
+      "objectives": [
+        "explain short-distance race",
+        "state benefits of running",
+        "state safety rules in athletics"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 7,
+      "topic": "Athletics – Meaning of Short Distance Race, Benefits of Running and Safety Rules",
+      "objectives": [
+        "demonstrate safe running",
+        "observe athletics safety rules"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 8,
+      "topic": "Simple Jump – Basic Skills of Jumping",
+      "objectives": [
+        "explain simple jumping",
+        "demonstrate basic jumping skills"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 9,
+      "topic": "Simple Jump – Benefits of Jumping and Safety Rules",
+      "objectives": [
+        "state benefits of jumping",
+        "observe safety rules for jumping"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 10,
+      "topic": "Revision",
+      "objectives": [
+        "revise major first-term PHE topics"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 11,
+      "topic": "Revision",
+      "objectives": [
+        "revise major first-term PHE topics",
+        "demonstrate learned skills"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 1",
+      "term": "First Term",
+      "subject": "Physical and Health Education",
+      "week": 12,
+      "topic": "Examination",
+      "objectives": [
+        "demonstrate understanding of first-term PHE work"
+      ],
+      "source": "Primary 1 Physical and Health Education",
+      "sourceUrl": "https://classbasic.com/first-term-physical-and-health-education-plan-lesson-notes-according-to-the-the-lagos-state-scheme-of-work-for-primary-1-basic-1-lesson-notes/"
+    },
+    {
+      "classLevel": "Basic 4",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 1,
+      "topic": "Revision / Resumption Test; Whole Numbers – counting and reading numbers from 1,000 up to 9,999 and place value",
+      "objectives": [
+        "count in hundreds and thousands",
+        "generate numbers using an abacus",
+        "apply counting in real-life problems",
+        "identify place value in numbers up to 9,999"
+      ],
+      "source": "Primary 4 Mathematics",
+      "sourceUrl": "https://syllabus.ng/primary4-scheme-of-work/mathematics/"
+    },
+    {
+      "classLevel": "Basic 4",
+      "term": "First Term",
+      "subject": "Mathematics",
+      "week": 2,
+      "topic": "Whole Numbers (continued) – counting from thousand to one million, writing numbers up to one million and place value",
+      "objectives": [
+        "count numbers in thousands and millions",
+        "write numbers in words up to one million",
+        "identify place value up to one million"
+      ],
+      "source": "Primary 4 Mathematics",
+      "sourceUrl": "https://syllabus.ng/primary4-scheme-of-work/mathematics/"
+    },
+    {
+      "classLevel": "Basic 4",
+      "term": "First Term",
+      "subject": "English Studies",
+      "week": 1,
+      "topic": "Review of Primary Three Third Term Work",
+      "objectives": [
+        "recall key language skills from Primary Three",
+        "demonstrate readiness for Primary Four work"
+      ],
+      "source": "Primary 4 English Studies",
+      "sourceUrl": "https://syllabus.ng/primary4-scheme-of-work/english/"
+    },
+    {
+      "classLevel": "Basic 4",
+      "term": "First Term",
+      "subject": "English Studies",
+      "week": 2,
+      "topic": "Speech Work – expressing possibility and permission; Reading – new words, meaning and comprehension",
+      "objectives": [
+        "use expressions of possibility and permission",
+        "discuss the main idea of a passage",
+        "identify supporting ideas and values in a passage"
+      ],
+      "source": "Primary 4 English Studies",
+      "sourceUrl": "https://syllabus.ng/primary4-scheme-of-work/english/"
+    },
+    {
+      "classLevel": "Basic 6",
+      "term": "First Term",
+      "subject": "English Studies",
+      "week": 1,
+      "topic": "Speech Work – revision of intonation practice; Structure – revision of verb forms; Reading – passages that encourage vocabulary development",
+      "objectives": [
+        "use appropriate intonation in dialogue",
+        "identify and use different verb forms",
+        "read passages for understanding and vocabulary development"
+      ],
+      "source": "Primary 6 English Studies",
+      "sourceUrl": "https://syllabus.ng/primary6-scheme-of-work/english/"
+    }
+  ]
+}
